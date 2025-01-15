@@ -1,14 +1,15 @@
 DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS upcoming_events;
-DROP TABLE IF EXISTS past_events;
+DROP TABLE IF EXISTS meetups;
 DROP TABLE IF EXISTS meetup_registrations;
 DROP TABLE IF EXISTS posts;
 DROP TABLE IF EXISTS speakers;
 DROP TABLE IF EXISTS meetup_comments;
 DROP TABLE IF EXISTS reviews;
-DROP TABLE IF EXISTS speaker_expertises;
-DROP TABLE IF EXISTS speakers;
-DROP TABLE IF EXISTS expertises;
+DROP TABLE IF EXISTS content_blocks;
+DROP TABLE IF EXISTS keynote_sessions;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS speaker_categories;
+
 
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -27,35 +28,17 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- bitta event table ozi yetadi manimcha hamma eventlarni saqlashga. meetup_date ga qarab past boganmi ili upcoming eventmi ajratsa boladi
-CREATE TABLE upcoming_events (
+CREATE TABLE meetups (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT,
+    parking BOOLEAN DEFAULT TRUE,
     location VARCHAR(255),
-    participant_number INT NOT NULL DEFAULT 0, 
-    meetup_date VARCHAR(255) NOT NULL DEFAULT '',
+    max_seats INT NOT NULL DEFAULT 0, 
+    meetup_date VARCHAR(255) NOT NULL DEFAULT '', 
     organizer_id INT, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    max_seats int NOT NULL DEFAULT 0,
-    seats_capacity varchar(10) NOT NULL,
-    snacks varchar(30) NO NULL DEFAULT ''
-);
-
-CREATE TABLE past_events (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    location VARCHAR(255),
-    participant_number INT NOT NULL DEFAULT 0, 
-    meetup_date VARCHAR(255) NOT NULL DEFAULT '',
-    organizer_id INT, 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    max_seats int NOT NULL DEFAULT 0,
-    seats_capacity varchar(10) NOT NULL,
-    snacks varchar(30) NO NULL DEFAULT ''
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE meetup_registrations (
@@ -68,9 +51,23 @@ CREATE TABLE meetup_registrations (
     UNIQUE KEY (user_id, meetup_id)
 );
 
+CREATE TABLE keynote_sessions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    meetup_id INT NOT NULL,          
+    subject VARCHAR(255) NOT NULL,   
+    speaker_id INT NOT NULL,         
+    start_time TIMESTAMP NOT NULL,  
+    end_time TIMESTAMP,         
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (meetup_id) REFERENCES meetups(id),
+    FOREIGN KEY (speaker_id) REFERENCES speakers(id)
+);
+
 CREATE TABLE posts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,  
+    category_id INT NOT NULL DEFAULT 0,
     title VARCHAR(255) NOT NULL,
     content TEXT,
     image_url TEXT NOT NULL DEFAULT '', 
@@ -80,9 +77,19 @@ CREATE TABLE posts (
     linkedin_profile VARCHAR(255) NOT NULL DEFAULT '',
     facebook_profile VARCHAR(255) NOT NULL DEFAULT '',  
     instagram_handle VARCHAR(100) NOT NULL DEFAULT '',
-    post_type ENUM('job_offer', 'news') NOT NULL,  
+    post_type ENUM('job_offer', 'news', 'article') NOT NULL DEFAULT 'news', 
     posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE speakers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,  
+    meetup_id INT, 
+    position VARCHAR(255) NOT NULL DEFAULT '',
+    bio TEXT NOT NULL DEFAULT '',  
+    linkedin_url VARCHAR(255) NOT NULL DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE meetup_comments (
@@ -107,48 +114,48 @@ CREATE TABLE reviews (
     user_id INT, 
     meetup_id INT, 
     description TEXT,  
-    media_url VARCHAR(255),
+    media_url VARCHAR(255) NOT NULL DEFAULT '', 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
- -- speaker tableda user_id bn user malumotlarini olib kesagam boladi. masalan name, linkedin_url, image_url
- -- category degan column nimaga kerak? anytmoqchi boganim experties table borakan demoqchidim
-CREATE TABLE speakers (
-    speaker_id INT AUTO_INCREMENT PRIMARY KEY, 
-    user_id INT,                               
-    meetup_id INT,                             
-    name VARCHAR(100) NOT NULL,              
-    position VARCHAR(100),                   
-    category VARCHAR(50),                    
-    linkedin_url VARCHAR(255)
-);
 
-CREATE TABLE expertises (
-    expertise_id INT PRIMARY KEY AUTO_INCREMENT,
-    field_name VARCHAR(100) NOT NULL UNIQUE
-);
-
-CREATE TABLE speaker_expertises (
-    speaker_id VARCHAR(50),
-    expertise_id INT,
-    PRIMARY KEY (speaker_id, expertise_id),
-    FOREIGN KEY (speaker_id) REFERENCES Speakers(speaker_id),
-    FOREIGN KEY (expertise_id) REFERENCES Expertises(expertise_id)
+CREATE TABLE categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,  
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 
-ALTER TABLE upcoming_events  
+CREATE TABLE speaker_categories (
+    PRIMARY KEY (speaker_id, category_id),
+    speaker_id INT,
+    category_id INT
+);
+
+CREATE TABLE content_blocks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT, 
+    block_type ENUM('text', 'image') NOT NULL,  
+    content TEXT,  
+    image_url TEXT,  
+    image_description TEXT,  
+    block_order INT NOT NULL DEFAULT 0,  
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE meetups  
      ADD CONSTRAINT fk_meetups_organizer FOREIGN KEY (organizer_id) REFERENCES users(id);
-
-ALTER TABLE past_events  
-    ADD CONSTRAINT fk_past_events_organizer FOREIGN KEY (organizer_id) REFERENCES users(id);
 
 ALTER TABLE meetup_registrations 
     ADD CONSTRAINT fk_meetup_registrations_user FOREIGN KEY (user_id) REFERENCES users(id),
     ADD CONSTRAINT fk_meetup_registrations_meetup FOREIGN KEY (meetup_id) REFERENCES meetups(id);
 
 ALTER TABLE posts 
-    ADD CONSTRAINT fk_posts_user FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT fk_posts_user FOREIGN KEY (user_id) REFERENCES users(id),
+    ADD CONSTRAINT fk_posts_category FOREIGN KEY (category_id) REFERENCES categories(id);
 
 ALTER TABLE speakers 
     ADD CONSTRAINT fk_speakers_user FOREIGN KEY (user_id) REFERENCES users(id),
@@ -166,3 +173,10 @@ ALTER TABLE reviews
 ALTER TABLE post_comments 
     ADD CONSTRAINT fk_post_comments_user FOREIGN KEY (user_id) REFERENCES users(id),
     ADD CONSTRAINT fk_post_comments_post FOREIGN KEY (post_id) REFERENCES posts(id);
+
+ALTER TABLE speaker_categories 
+    ADD CONSTRAINT fk_speaker_categories_category FOREIGN KEY (category_id) REFERENCES categories(id),
+    ADD CONSTRAINT fk_speaker_categories_speaker FOREIGN KEY (speaker_id) REFERENCES speakers(id);
+
+ALTER TABLE content_blocks 
+     ADD CONSTRAINT fk_content_blocks FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE;
