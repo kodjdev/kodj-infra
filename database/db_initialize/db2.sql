@@ -1,14 +1,17 @@
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS meetups;
 DROP TABLE IF EXISTS meetup_registrations;
-DROP TABLE IF EXISTS posts;
 DROP TABLE IF EXISTS speakers;
 DROP TABLE IF EXISTS meetup_comments;
 DROP TABLE IF EXISTS reviews;
-DROP TABLE IF EXISTS content_blocks;
 DROP TABLE IF EXISTS keynote_sessions;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS speaker_categories;
+DROP TABLE IF EXISTS job_offers;
+DROP TABLE IF EXISTS news;
+DROP TABLE IF EXISTS job_offer_comments;
+DROP TABLE IF EXISTS news_comments;
+
 
 
 CREATE TABLE users (
@@ -36,6 +39,8 @@ CREATE TABLE meetups (
     location VARCHAR(255),
     max_seats INT NOT NULL DEFAULT 0, 
     meetup_date VARCHAR(255) NOT NULL DEFAULT '', 
+    start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,  
+    end_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,         
     organizer_id INT, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -64,9 +69,36 @@ CREATE TABLE keynote_sessions (
     FOREIGN KEY (speaker_id) REFERENCES speakers(id)
 );
 
-CREATE TABLE posts (
+
+CREATE TABLE job_offers (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,  
+    user_id INT,
+    category_id INT NOT NULL DEFAULT 0,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    company_name VARCHAR(255) NOT NULL,
+    required_experience VARCHAR(255) NOT NULL,
+    technologies TEXT,
+    job_offer_status ENUM('open', 'closed', 'filled', 'pending') NOT NULL DEFAULT 'open',
+    job_type ENUM('full_time', 'part_time', 'contract', 'internship') NOT NULL DEFAULT 'full_time',
+    job_benefits TEXT, 
+    remote BOOLEAN DEFAULT FALSE,
+    place_of_work VARCHAR(255),
+    salary_range VARCHAR(255), 
+    image_url TEXT NOT NULL DEFAULT '',
+    contact_phone VARCHAR(255) NOT NULL DEFAULT '',
+    contact_email VARCHAR(255) NOT NULL DEFAULT '',
+    twitter_profile VARCHAR(255) NOT NULL DEFAULT '',
+    linkedin_profile VARCHAR(255) NOT NULL DEFAULT '',
+    facebook_profile VARCHAR(255) NOT NULL DEFAULT '',
+    instagram_profile VARCHAR(100) NOT NULL DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE news (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
     category_id INT NOT NULL DEFAULT 0,
     title VARCHAR(255) NOT NULL,
     content TEXT,
@@ -77,8 +109,7 @@ CREATE TABLE posts (
     linkedin_profile VARCHAR(255) NOT NULL DEFAULT '',
     facebook_profile VARCHAR(255) NOT NULL DEFAULT '',  
     instagram_handle VARCHAR(100) NOT NULL DEFAULT '',
-    post_type ENUM('job_offer', 'news', 'article') NOT NULL DEFAULT 'news', 
-    posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
@@ -87,7 +118,11 @@ CREATE TABLE speakers (
     user_id INT,  
     meetup_id INT, 
     position VARCHAR(255) NOT NULL DEFAULT '',
-    bio TEXT NOT NULL DEFAULT '',  
+    bio TEXT NOT NULL DEFAULT '', 
+    rating DECIMAL(3, 2) DEFAULT 0.00,
+    short_description VARCHAR(255) DEFAULT '',
+    experiance VARCHAR(255) NOT NULL DEFAULT '',
+    topic VARCHAR(255) NOT NULL DEFAULT '',
     linkedin_url VARCHAR(255) NOT NULL DEFAULT '',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -100,14 +135,22 @@ CREATE TABLE meetup_comments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE post_comments (
+CREATE TABLE job_offer_comments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,  
-    post_id INT,  
-    comment TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    job_offer_id INT, 
+    comment TEXT, 
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
 );
 
+
+CREATE TABLE news_comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,  
+    news_id INT,  
+    comment TEXT,  
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+);
 
 CREATE TABLE reviews (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -115,6 +158,7 @@ CREATE TABLE reviews (
     meetup_id INT, 
     description TEXT,  
     media_url VARCHAR(255) NOT NULL DEFAULT '', 
+    media_type ENUM('image', 'video', 'audio', 'other') NOT NULL DEFAULT 'other',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -133,50 +177,42 @@ CREATE TABLE speaker_categories (
     category_id INT
 );
 
-CREATE TABLE content_blocks (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    post_id INT, 
-    block_type ENUM('text', 'image') NOT NULL,  
-    content TEXT,  
-    image_url TEXT,  
-    image_description TEXT,  
-    block_order INT NOT NULL DEFAULT 0,  
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
 
 ALTER TABLE meetups  
-     ADD CONSTRAINT fk_meetups_organizer FOREIGN KEY (organizer_id) REFERENCES users(id);
+    ADD CONSTRAINT fk_meetups_organizer FOREIGN KEY (organizer_id) REFERENCES users(id) ON DELETE CASCADE;
 
 ALTER TABLE meetup_registrations 
-    ADD CONSTRAINT fk_meetup_registrations_user FOREIGN KEY (user_id) REFERENCES users(id),
-    ADD CONSTRAINT fk_meetup_registrations_meetup FOREIGN KEY (meetup_id) REFERENCES meetups(id);
-
-ALTER TABLE posts 
-    ADD CONSTRAINT fk_posts_user FOREIGN KEY (user_id) REFERENCES users(id),
-    ADD CONSTRAINT fk_posts_category FOREIGN KEY (category_id) REFERENCES categories(id);
+    ADD CONSTRAINT fk_meetup_registrations_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    ADD CONSTRAINT fk_meetup_registrations_meetup FOREIGN KEY (meetup_id) REFERENCES meetups(id) ON DELETE CASCADE;
 
 ALTER TABLE speakers 
-    ADD CONSTRAINT fk_speakers_user FOREIGN KEY (user_id) REFERENCES users(id),
-    ADD CONSTRAINT fk_speakers_meetup FOREIGN KEY (meetup_id) REFERENCES meetups(id);
+    ADD CONSTRAINT fk_speakers_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    ADD CONSTRAINT fk_speakers_meetup FOREIGN KEY (meetup_id) REFERENCES meetups(id) ON DELETE CASCADE;
 
 ALTER TABLE meetup_comments 
-    ADD CONSTRAINT fk_meetup_comments_user FOREIGN KEY (user_id) REFERENCES users(id),
-    ADD CONSTRAINT fk_meetup_comments_meetup FOREIGN KEY (meetup_id) REFERENCES meetups(id);
+    ADD CONSTRAINT fk_meetup_comments_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    ADD CONSTRAINT fk_meetup_comments_meetup FOREIGN KEY (meetup_id) REFERENCES meetups(id) ON DELETE CASCADE;
 
 ALTER TABLE reviews 
-    ADD CONSTRAINT fk_reviews_user FOREIGN KEY (user_id) REFERENCES users(id),
-    ADD CONSTRAINT fk_reviews_meetup FOREIGN KEY (meetup_id) REFERENCES meetups(id);
-
-
-ALTER TABLE post_comments 
-    ADD CONSTRAINT fk_post_comments_user FOREIGN KEY (user_id) REFERENCES users(id),
-    ADD CONSTRAINT fk_post_comments_post FOREIGN KEY (post_id) REFERENCES posts(id);
+    ADD CONSTRAINT fk_reviews_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    ADD CONSTRAINT fk_reviews_meetup FOREIGN KEY (meetup_id) REFERENCES meetups(id) ON DELETE CASCADE;
 
 ALTER TABLE speaker_categories 
-    ADD CONSTRAINT fk_speaker_categories_category FOREIGN KEY (category_id) REFERENCES categories(id),
-    ADD CONSTRAINT fk_speaker_categories_speaker FOREIGN KEY (speaker_id) REFERENCES speakers(id);
+    ADD CONSTRAINT fk_speaker_categories_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+    ADD CONSTRAINT fk_speaker_categories_speaker FOREIGN KEY (speaker_id) REFERENCES speakers(id) ON DELETE CASCADE;
 
-ALTER TABLE content_blocks 
-     ADD CONSTRAINT fk_content_blocks FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE;
+ALTER TABLE job_offers
+    ADD CONSTRAINT fk_job_offers_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    ADD CONSTRAINT fk_job_offers_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE;
+
+ALTER TABLE news
+    ADD CONSTRAINT fk_news_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    ADD CONSTRAINT fk_news_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE;
+
+ALTER TABLE job_offer_comments
+    ADD CONSTRAINT fk_job_offer_comments_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    ADD CONSTRAINT fk_job_offer_comments_job_offer FOREIGN KEY (job_offer_id) REFERENCES job_offers(id) ON DELETE CASCADE;
+
+ALTER TABLE news_comments
+    ADD CONSTRAINT fk_news_comments_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    ADD CONSTRAINT fk_news_comments_news FOREIGN KEY (news_id) REFERENCES news(id) ON DELETE CASCADE;
