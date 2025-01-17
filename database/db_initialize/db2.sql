@@ -18,6 +18,7 @@ CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
+    contact_phone VARCHAR(255) NOT NULL DEFAULT '',
     password VARCHAR(255) NOT NULL, 
     google_id VARCHAR(255) UNIQUE, 
     apple_id VARCHAR(255) UNIQUE,   
@@ -28,7 +29,8 @@ CREATE TABLE users (
     locale VARCHAR(50) NOT NULL DEFAULT '',      
     role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    category_id INT -- we connect the job titles (predefined)
 );
 
 CREATE TABLE meetups (
@@ -43,7 +45,8 @@ CREATE TABLE meetups (
     end_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,         
     organizer_id INT, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    type ENUM('upcoming', 'past', 'ongoing') NOT NULL  DEFAULT "upcoming"
 );
 
 CREATE TABLE meetup_registrations (
@@ -73,6 +76,7 @@ CREATE TABLE keynote_sessions (
 CREATE TABLE job_offers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
+    tags_id INT, 
     category_id INT NOT NULL DEFAULT 0,
     title VARCHAR(255) NOT NULL,
     content TEXT,
@@ -98,10 +102,12 @@ CREATE TABLE job_offers (
 
 CREATE TABLE news (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    tags_id INT,
     user_id INT,
     category_id INT NOT NULL DEFAULT 0,
     title VARCHAR(255) NOT NULL,
     content TEXT,
+    type ENUM('tech', 'meeetup', 'social') NOT NULL  DEFAULT "tech",
     image_url TEXT NOT NULL DEFAULT '', 
     contact_phone VARCHAR(255) NOT NULL DEFAULT '',
     contact_email VARCHAR(255) NOT NULL DEFAULT '',
@@ -110,7 +116,7 @@ CREATE TABLE news (
     facebook_profile VARCHAR(255) NOT NULL DEFAULT '',  
     instagram_handle VARCHAR(100) NOT NULL DEFAULT '',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
 );
 
 CREATE TABLE speakers (
@@ -176,6 +182,19 @@ CREATE TABLE speaker_categories (
     speaker_id INT,
     category_id INT
 );
+
+CREATE TABLE tags (
+    tags_id AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+
+CREATE TABLE job_tags (
+    PRIMARY KEY(job_offer_id, tags_id),
+    job_offer_id INT,
+    tags_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
 
 
 ALTER TABLE meetups  
